@@ -1,0 +1,19 @@
+{
+	"folders": [
+		{
+			"path": "."
+		}
+	],
+	"settings": {
+		"tailwindCSS.includeLanguages": {
+			"svelte": "html"
+		},
+		"editor.quickSuggestions": {
+			"strings": true
+		},
+		"tailwindCSS.experimental.classRegex": [
+			["class\\s*=\\s*['\"`]([^'\"]*)['\"`]", 1],
+			["class:\\w+=\\s*['\"`]([^'\"]*)['\"`]", 1]
+		]
+	}
+}

@@ -1,0 +1,15 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* メトロカラーなどのカスタムCSSがあればここに */
+* {
+	box-sizing: border-box !important;
+	font-size: 10px;
+}
+
+body {
+	margin: 0;
+	padding: 0;
+	border: none;
+}
