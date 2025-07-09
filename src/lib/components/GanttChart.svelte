@@ -1,18 +1,25 @@
 <script lang="ts">
-	import type { GanttTask } from '$lib/types/task';
+	import type { Task } from '$lib/types/task';
+	import { toGanttTaskFromTask, toTaskFromGanttTask, type GanttTask } from '$lib/utils/ganttGrid';
 	import GanttGrid from './GanttGrid.svelte';
 	import GanttTaskRows from './GanttTaskRows.svelte';
 	import GridHeader from './GridHeader.svelte';
 	import TaskTreePanel from './TaskTreePanel.svelte';
 
-	let { tasks, cellNumber }: { tasks: GanttTask[]; cellNumber: number } = $props();
+	let { tasks, cellNumber }: { tasks: Task[]; cellNumber: number } = $props();
+
+	let dateBase = $state(new Date(Date.now()));
+	let dateUnit = $state(1000 * 60 * 60 * 1);
+	let dateUnitSubstep = $state(2);
 
 	let gTasks: GanttTask[] = $derived.by(() => {
 		const parentTaskIds = new Set(tasks.map((task) => task.parentTaskId));
 		return Array.from(parentTaskIds)
 			.sort()
 			.map((parentTaskId) => {
-				const children = tasks.filter((task) => task.parentTaskId === parentTaskId);
+				const children = tasks
+					.filter((task) => task.parentTaskId === parentTaskId)
+					.map((task) => toGanttTaskFromTask(task, dateBase, dateUnit, dateUnitSubstep));
 				if (parentTaskId === '') {
 					return children;
 				}
@@ -30,73 +37,46 @@
 			})
 			.flat();
 	});
+
+	let locMax = $state(0);
+	let locMin = $state(0);
+	let headerHeight = $state(20);
+	const cellWidth = $state(20);
+	const cellHeight = $state(20);
 	//
-	//
-	let taskTreePanelElement: HTMLDivElement | null = $state(null);
-	let gridHeaderElement: HTMLDivElement | null = $state(null);
-	let taskTreeWidth = $state(0);
-	let headerHeight = $state(0);
-	const cellWidth = 20;
-	const cellHeight = 20;
+	const useCols = $state([
+		'taskId',
+		'title',
+		'startCell',
+		'endCell',
+		'startDate',
+		'endDate',
+		'parentTaskId',
+		'taskType'
+	]);
 
 	const onTaskUpdate = (newTask: GanttTask) => {
-		tasks = tasks.map((task: GanttTask) => (task.taskId === newTask.taskId ? newTask : task));
-	};
-
-	$effect(() => {
-		console.log('ganttchart $effect');
-		if (!taskTreePanelElement) {
-			console.log('taskTreePanelElement not found');
-			return;
-		}
-		taskTreeWidth = taskTreePanelElement.getBoundingClientRect().width;
-		if (!(gridHeaderElement instanceof Element)) {
-			console.log('gridHeaderElement not found');
-			return;
-		}
-		const computed = getComputedStyle(gridHeaderElement as Element);
-		const lineHeightStr = computed.lineHeight;
-		headerHeight =
-			parseFloat(computed.height) +
-			parseFloat(computed.borderTopWidth) +
-			parseFloat(computed.borderBottomWidth) +
-			parseFloat(computed.paddingTop) +
-			parseFloat(computed.paddingBottom);
-		console.log(
-			'computed',
-			computed,
-			gridHeaderElement,
-			gridHeaderElement.offsetHeight,
-			gridHeaderElement.getBoundingClientRect(),
-			gridHeaderElement.getClientRects()
+		tasks = tasks.map((task: Task) =>
+			task.taskId === newTask.taskId ? toTaskFromGanttTask(newTask, dateBase, dateUnit) : task
 		);
-	});
+	};
+	console.log('task,gTask', tasks, gTasks);
 </script>
 
 <div class="flex w-full overflow-auto font-mono text-xs" style="height:100%; overflow: visible;">
 	<!-- 左側：Task情報 -->
-	<div
-		bind:this={taskTreePanelElement}
-		class="___border-r ____border-gray-300 min-w-[200px] shrink-0"
-	>
-		<TaskTreePanel
-			{gTasks}
-			columns={['taskId', 'title', 'startCell', 'endCell', 'parentTaskId', 'taskType']}
-			{headerHeight}
-			{cellHeight}
-		/>
-	</div>
+	<TaskTreePanel {gTasks} columns={useCols} {cellHeight} {headerHeight} />
 
 	<!-- 右側：Gantt情報 -->
-	<div class={`-translate-x-[${taskTreeWidth}]px`}>
-		<div bind:this={gridHeaderElement}>
-			<GridHeader columns={cellNumber} {cellWidth} {cellHeight} />
-		</div>
+	<div>
+		<!-- gantt header -->
+		<GridHeader columns={cellNumber} {cellWidth} {cellHeight} {headerHeight} />
+
+		<!-- gantt body -->
 		<svg
 			class="w-full border"
 			style={`height: ${gTasks.length * cellHeight}px; width: ${cellWidth * cellNumber}`}
 		>
-			<GanttTaskRows {gTasks} {cellWidth} {cellHeight} onUpdate={onTaskUpdate} />
 			<GanttGrid
 				numCols={cellNumber}
 				numRows={gTasks.length}
@@ -105,6 +85,7 @@
 				width={cellNumber * cellWidth}
 				height={gTasks.length * cellHeight}
 			/>
+			<GanttTaskRows {gTasks} {cellWidth} {cellHeight} onUpdate={onTaskUpdate} />
 		</svg>
 	</div>
 </div>

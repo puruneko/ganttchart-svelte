@@ -1,23 +1,30 @@
 <script lang="ts">
-	import type { GanttTask } from '$lib/types/task';
+	import type { GanttTask } from '$lib/utils/ganttGrid';
 
 	const {
 		gTasks,
 		columns,
-		headerHeight = 30,
-		cellHeight = 30
+		cellHeight,
+		headerHeight
 	}: {
 		gTasks: GanttTask[];
 		columns: string[];
-		headerHeight: number;
 		cellHeight: number;
+		headerHeight: number;
 	} = $props();
 	//
 	const w = 100;
 	//
 	const taskParamAccesser = (task: GanttTask, name: string): any => {
+		if (name in task) {
+			//@ts-ignore
+			return task[name];
+		}
 		//@ts-ignore
-		return name in task ? task[name] : task.data[name];
+		if (task.extendedProps && name in task.extendedProps) {
+			return task.extendedProps[name];
+		}
+		return 'UNDEFINED';
 	};
 	const columnWidths = $state(columns.map((c) => 60)); // [Name, Start, End]
 	let resizingColIndex = -1;
@@ -49,20 +56,23 @@
 <div class="sticky top-0 z-10" style="margin-top: 0px;">
 	<!-- ヘッダー -->
 	<div
-		class="flex border-b border-gray-400 bg-gray-100 bg-gray-200"
-		style={`height: ${headerHeight}px; max-height: ${headerHeight}px;min-height: ${headerHeight}px;`}
+		class="flex border-t border-b border-gray-400 bg-gray-100 bg-gray-200"
+		style="height:{headerHeight * 2}px;max-height:{headerHeight * 2}px;min-height:{headerHeight *
+			2}px;"
 	>
 		{#each columns as column, i}
 			<div
-				class={`flex border-r border-gray-400 px-2 py-1 text-sm font-bold`}
-				style="width: {columnWidths[i]}px;"
+				class="flex border-r border-gray-400 text-sm font-bold h-[{headerHeight * 2}px]"
+				style="width: {columnWidths[i]}px;height:{headerHeight * 2}px;max-height:{headerHeight *
+					2}px;min-height:{headerHeight * 2}px;"
 			>
-				<span class="text-center" style="flex-grow:1; width:{columnWidths[i] - 1}px;">{column}</span
+				<span class="text-center" style="flex-grow:1; width:{columnWidths[i] - 1}px;height:100%;"
+					>{column}</span
 				>
 				<!-- リサイズグリップ -->
 				<div
 					class="cursor-col-resize bg-transparent"
-					style="width:1px;min-width:1px; z-index: 10;"
+					style="width:1px;min-width:1px; z-index: 10;height:100%;"
 					onpointerdown={(e) => onPointerDown(e, i)}
 				></div>
 			</div>
@@ -73,12 +83,14 @@
 	{#each gTasks as gTask}
 		<div
 			class="flex border-b border-gray-300"
-			style="height: {cellHeight}px; max-height: {cellHeight}px;min-height: {cellHeight}px;"
+			style="height:{cellHeight}px;max-height:{cellHeight}px;min-height:{cellHeight}px;"
 		>
 			{#each columns as column, i}
 				<div
-					class={`__truncate w-[${w}px] border-r border-gray-400 px-2 py-1`}
-					style="width: {columnWidths[i]}px;"
+					class="__truncate w-[{w}px] border-r border-gray-400"
+					style="width: {columnWidths[
+						i
+					]}px;height:{cellHeight}px;max-height:{cellHeight}px;min-height:{cellHeight}px;"
 				>
 					<span>{taskParamAccesser(gTask, column)}</span>
 				</div>

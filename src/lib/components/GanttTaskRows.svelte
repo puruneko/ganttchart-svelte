@@ -1,12 +1,12 @@
 <script lang="ts">
 	import TaskRow from './TaskRow.svelte';
 	import SummaryRow from './SummaryRow.svelte';
-	import type { GanttTask } from '$lib/types/task';
+	import type { GanttTask } from '$lib/utils/ganttGrid';
 
 	const {
 		gTasks,
-		cellWidth = 40,
-		cellHeight = 30,
+		cellWidth,
+		cellHeight,
 		onUpdate
 	}: {
 		gTasks: GanttTask[];

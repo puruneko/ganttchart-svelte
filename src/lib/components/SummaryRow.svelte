@@ -1,5 +1,5 @@
 <script lang="ts">
-	import type { GanttTask } from '$lib/types/task';
+	import type { GanttTask } from '$lib/utils/ganttGrid';
 	import RowTemplate from './RowTemplate.svelte';
 
 	const {

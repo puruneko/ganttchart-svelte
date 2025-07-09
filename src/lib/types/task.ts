@@ -1,13 +1,13 @@
 export type TaskType = 'task' | 'summary';
 
-export interface GanttTask {
+export interface Task {
 	taskId: string; // 一意なID
 	parentTaskId: string; // 親taskId（summary用）
 
 	taskType: TaskType; // 'task' or 'summary'
 	title: string; // 表示名
-	startCell: number; // X軸 開始位置（将来的に Date へ）
-	endCell: number; // X軸 終了位置
+	startDate: Date;
+	endDate: Date;
 
 	// 表示やUI用スタイルを明示的に分離
 	style?: {

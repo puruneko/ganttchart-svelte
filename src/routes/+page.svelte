@@ -1,6 +1,7 @@
 <script lang="ts">
 	import GanttChart from '$lib/components/GanttChart.svelte';
-	import type { GanttTask } from '$lib/types/task';
+	import type { Task } from '$lib/types/task';
+	import { toDateFromCellCoordinate } from '$lib/utils/ganttGrid';
 	//
 	function randomInt(n: number, m: number): number {
 		return Math.floor(Math.random() * (m - n + 1)) + n;
@@ -34,7 +35,8 @@
 	const taskNumber = 1000;
 	const summaryNumber = randomInt(10, 20);
 	const summaryIds = uniqueRandomInts(0, taskNumber, summaryNumber);
-	const tasks: GanttTask[] = Array.from({ length: taskNumber }).map((_, i) => {
+	const now = new Date(Date.now());
+	const tasks: Task[] = Array.from({ length: taskNumber }).map((_, i) => {
 		const rCellNumber = randomInt(0, cellNumber / 4);
 		const rTaskNumber = randomInt(0, taskNumber);
 		const s = randomInt(0, rCellNumber);
@@ -42,8 +44,8 @@
 		return {
 			taskId: `t${i}`,
 			title: `Task ${i}`,
-			startCell: s,
-			endCell: e,
+			startDate: toDateFromCellCoordinate(s, now, 1000 * 60 * 60 * 1),
+			endDate: toDateFromCellCoordinate(e, now, 1000 * 60 * 60 * 1),
 			parentTaskId: rTaskNumber < taskNumber * 0.99 ? `pp${rTaskNumber}` : '',
 			taskType: 'task'
 		};
