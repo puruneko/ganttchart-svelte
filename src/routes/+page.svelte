@@ -2,6 +2,8 @@
 	import GanttChart from '$lib/components/GanttChart.svelte';
 	import type { Task } from '$lib/types/task';
 	import { toDateFromCellCoordinate } from '$lib/utils/ganttGrid';
+	import Sticky from '../__lab/sticky.svelte';
+	import Sticky2 from '../__lab/sticky2.svelte';
 	//
 	function randomInt(n: number, m: number): number {
 		return Math.floor(Math.random() * (m - n + 1)) + n;
@@ -43,7 +45,7 @@
 		const e = Math.min(s + rCellNumber, cellNumber - 1);
 		return {
 			taskId: `t${i}`,
-			title: `Task ${i}`,
+			title: `Taskkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkk ${i}`,
 			startDate: toDateFromCellCoordinate(s, now, 1000 * 60 * 60 * 1),
 			endDate: toDateFromCellCoordinate(e, now, 1000 * 60 * 60 * 1),
 			parentTaskId: rTaskNumber < taskNumber * 0.99 ? `pp${rTaskNumber}` : '',
@@ -52,4 +54,6 @@
 	});
 </script>
 
-<GanttChart {tasks} {cellNumber} />
+<!-- <GanttChart {tasks} {cellNumber} /> -->
+<div style="height: 50px; width:50px; background-color: red;">debug margin</div>
+<Sticky2 />

@@ -1,8 +1,28 @@
 <script lang="ts">
 	import '../lib/styles/theme.css';
+	export async function load() {
+		try {
+			const res = await fetch('/some-api');
+			if (!res.ok) {
+				return {
+					error: true,
+					message: 'Fetch failed with ' + res.status
+				};
+			}
+			const data = await res.json();
+			return { data };
+		} catch (e: any) {
+			// エラーにしない
+			return {
+				error: true,
+				message: 'Unexpected error: ' + e.message
+			};
+		}
+	}
 </script>
 
-<div class="flex h-screen max-h-screen flex-col" style="overflow: hidden;">
+<slot />
+<!-- <div class="flex h-screen max-h-screen flex-col" style="overflow: hidden;">
 	<header class="bg-metro-blue p-4 text-white">
 		<h1>テスト</h1>
 	</header>
@@ -11,5 +31,5 @@
 		<slot />
 	</main>
 
-	<!--<footer class="bg-gray-200 p-2 text-center text-sm">© 2025 ねこプル</footer>-->
-</div>
+	
+</div> -->

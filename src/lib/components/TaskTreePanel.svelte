@@ -53,48 +53,60 @@
 	}
 </script>
 
-<div class="sticky top-0 z-10" style="margin-top: 0px;">
-	<!-- ヘッダー -->
-	<div
-		class="flex border-t border-b border-gray-400 bg-gray-100 bg-gray-200"
-		style="height:{headerHeight * 2}px;max-height:{headerHeight * 2}px;min-height:{headerHeight *
-			2}px;"
-	>
-		{#each columns as column, i}
-			<div
-				class="flex border-r border-gray-400 text-sm font-bold h-[{headerHeight * 2}px]"
-				style="width: {columnWidths[i]}px;height:{headerHeight * 2}px;max-height:{headerHeight *
-					2}px;min-height:{headerHeight * 2}px;"
-			>
-				<span class="text-center" style="flex-grow:1; width:{columnWidths[i] - 1}px;height:100%;"
-					>{column}</span
-				>
-				<!-- リサイズグリップ -->
-				<div
-					class="cursor-col-resize bg-transparent"
-					style="width:1px;min-width:1px; z-index: 10;height:100%;"
-					onpointerdown={(e) => onPointerDown(e, i)}
-				></div>
-			</div>
-		{/each}
-	</div>
-
-	<!-- 各タスク -->
-	{#each gTasks as gTask}
+{#if true}
+	<svg>
+		<!--header-->
+		<g>
+			{#each columns as column, i}
+				<div></div>
+			{/each}
+		</g>
+		<!--body-->
+	</svg>
+{:else}
+	<div class="sticky top-0 z-10" style="margin-top: 0px;">
+		<!-- ヘッダー -->
 		<div
-			class="flex border-b border-gray-300"
-			style="height:{cellHeight}px;max-height:{cellHeight}px;min-height:{cellHeight}px;"
+			class="flex border-t border-b border-gray-400 bg-gray-100 bg-gray-200"
+			style="height:{headerHeight * 2}px;max-height:{headerHeight * 2}px;min-height:{headerHeight *
+				2}px;"
 		>
 			{#each columns as column, i}
 				<div
-					class="__truncate w-[{w}px] border-r border-gray-400"
-					style="width: {columnWidths[
-						i
-					]}px;height:{cellHeight}px;max-height:{cellHeight}px;min-height:{cellHeight}px;"
+					class="flex border-r border-gray-400 text-sm font-bold h-[{headerHeight * 2}px]"
+					style="width: {columnWidths[i]}px;height:{headerHeight * 2}px;max-height:{headerHeight *
+						2}px;min-height:{headerHeight * 2}px;"
 				>
-					<span>{taskParamAccesser(gTask, column)}</span>
+					<span class="text-center" style="flex-grow:1; width:{columnWidths[i] - 1}px;height:100%;"
+						>{column}</span
+					>
+					<!-- リサイズグリップ -->
+					<div
+						class="cursor-col-resize bg-transparent"
+						style="width:1px;min-width:1px; z-index: 10;height:100%;"
+						onpointerdown={(e) => onPointerDown(e, i)}
+					></div>
 				</div>
 			{/each}
 		</div>
-	{/each}
-</div>
+
+		<!-- 各タスク -->
+		{#each gTasks as gTask}
+			<div
+				class="flex border-b border-gray-300"
+				style="height:{cellHeight}px;max-height:{cellHeight}px;min-height:{cellHeight}px;"
+			>
+				{#each columns as column, i}
+					<div
+						class="__truncate w-[{w}px] border-r border-gray-400"
+						style="width: {columnWidths[
+							i
+						]}px;height:{cellHeight}px;max-height:{cellHeight}px;min-height:{cellHeight}px;"
+					>
+						<span>{taskParamAccesser(gTask, column)}</span>
+					</div>
+				{/each}
+			</div>
+		{/each}
+	</div>
+{/if}
