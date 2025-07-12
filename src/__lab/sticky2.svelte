@@ -11,6 +11,7 @@
 	//
 	let WrapperElement: HTMLDivElement;
 	let leftSVGEl: SVGSVGElement;
+	let leftHeaderSVGElement: SVGSVGElement;
 	//let contentGroupLeft: SVGGElement;
 	let bodySVGEl: SVGSVGElement;
 	let contentGroupBody: SVGGElement;
@@ -21,7 +22,7 @@
 		Array.from({ length: rowNumber }, (_, i) => columns.map((col) => `R(${i + 1})_C(${col})`))
 	);
 
-	let columnWidths = $derived(columns.map((col, i) => 100 + i * 10));
+	let columnWidths = $state(columns.map((col, i) => 100 + i * 10));
 	let columnLocsX = $derived(
 		columns.map((col, i) => {
 			return columnWidths.slice(0, i).reduce((total, w) => total + w, 0);
@@ -31,19 +32,17 @@
 	let columnsWidth = $derived(
 		columnLocsX[columnLocsX.length - 1] + columnWidths[columnWidths.length - 1] || 0
 	);
-	let svgHeight = $state(headerHeight + cellHeight * (rowNumber + 1));
+	let svgHeight = $state(cellHeight * (rowNumber + 1));
 	let bodyWidth = $state(cellWidth * cellNumber);
 
 	//
-	let wrapperPos: any = $state(null);
+	let wrapperPos: any = $state({
+		top: 0,
+		left: 0
+	});
 	onMount(async () => {
 		// レンダリング完了後にBBOXを取得
 		await tick();
-		// const bboxLeft = contentGroupLeft.getBBox();
-		// leftSVGHeight = headerHeight + bboxLeft.height;
-		// const bboxBody = contentGroupBody.getBBox();
-		// bodySVGHeight = headerHeight + bboxBody.height;
-		// bodySVGWidth = bboxBody.width;
 		const rect = WrapperElement.getBoundingClientRect();
 		const pageX = rect.left + window.scrollX;
 		const pageY = rect.top + window.scrollY;
@@ -51,6 +50,7 @@
 			top: pageY,
 			left: pageX
 		};
+		//
 	});
 
 	let scrollTop = $state(0);
@@ -58,14 +58,7 @@
 		console.log(e);
 		scrollTop = e.target.scrollTop;
 	};
-	let contentScrollLeft = $state(0);
-	const handleScrollXContent = (e: any) => {
-		contentScrollLeft = e.target.scrollLeft;
-	};
 	let InputElement: HTMLDivElement | null = $state(null);
-	let isDisplayInput = $state(false);
-	let inputElementTop = $state('0');
-	let inputElementLeft = $state('0');
 	let inputText = $state('');
 	let isEditing: any = $state(false);
 	let inputStyle = $state({
@@ -98,14 +91,15 @@
 			height: `${bbox.height}px`,
 			fontSize: text.getAttribute('font-size') || 'inherit'
 		};
-		isEditing = { row: text.dataset.row, col: text.dataset.col };
+		isEditing = { row: text.dataset.row, col: text.dataset.col, elem: text };
 		console.log('handleClickSVGText', isEditing);
 
 		// 遅延してフォーカス（マウント後）
 		setTimeout(() => {
-			if (!InputElement) {
+			if (!InputElement || !isEditing.elem) {
 				return;
 			}
+			isEditing.elem.style.display = 'none';
 			InputElement.focus();
 			// 全選択
 			const range = document.createRange();
@@ -117,56 +111,210 @@
 	};
 	function commitEdit() {
 		//
+		isEditing.elem.style.display = '';
+		//
 		const r = Number(isEditing.row);
 		const c = Number(isEditing.col);
 		const text = InputElement?.textContent || '';
 		rows[r][c] = text; //inputText;
 		//
+		//
 		isEditing = false;
 		inputText = '';
 	}
+	//
+	//
+	let colWidthResizeState: any = $state({
+		index: -1,
+		startX: -1,
+		startWidth: -1
+	});
+	const onPointerDown = (event: PointerEvent, colIndex: number) => {
+		colWidthResizeState = {
+			index: colIndex,
+			startX: event.clientX,
+			startWidth: columnWidths[colIndex]
+		};
+		console.log('onPointerDown', colWidthResizeState);
+
+		if (!leftHeaderSVGElement) {
+			return;
+		}
+		window.addEventListener('pointermove', onPointerMove);
+		window.addEventListener('pointerup', onPointerUp);
+		leftHeaderSVGElement.style.userSelect = 'none';
+	};
+
+	const onPointerMove = (event: PointerEvent) => {
+		console.log('onPointerMove', event);
+		if (colWidthResizeState.index < 0) return;
+		const delta = event.clientX - colWidthResizeState.startX;
+		columnWidths[colWidthResizeState.index] = Math.max(50, colWidthResizeState.startWidth + delta);
+	};
+
+	function onPointerUp() {
+		console.log('onPointerUp', colWidthResizeState);
+		colWidthResizeState = null;
+		window.removeEventListener('pointermove', onPointerMove);
+		window.removeEventListener('pointerup', onPointerUp);
+		leftHeaderSVGElement.style.userSelect = '';
+	}
+	//
+	//
 	console.log('sticky2:', columnWidths, columnLocsX, columnsWidth);
 </script>
 
 <div
 	bind:this={WrapperElement}
 	id="wrapper"
-	style="position:relative; display: flex; overflow-y: scroll; overflow-x: hidden;width: 80vw; min-width: {columnsWidth}px; max-height: 80vh"
+	style:position="relative"
+	style:overflow="scroll"
+	style:width="80vw"
+	style:max-width="80vw"
+	style:min-width="{columnsWidth}px"
+	style:max-height="80vh"
 	onscroll={handleScrollYWrapper}
 >
-	{#if wrapperPos}
-		<div
-			bind:this={InputElement}
-			contenteditable="true"
-			role="textbox"
-			aria-multiline="false"
-			style="position: fixed;
-    z-index: 10;
-    box-sizing: content-box;
-    padding: 0;
-    margin: 0;
-    outline: none;
-    white-space: nowrap;
-    background: none;
-    color: inherit;
-      left: {inputStyle.left};
-      top: {inputStyle.top};
-      width: {inputStyle.width};
-      height: {inputStyle.height};
-      font-size: {inputStyle.fontSize};
-	  display: {isEditing ? undefined : 'none'}
-    "
-			onblur={commitEdit}
-			onkeydown={(e) => e.key === 'Enter' && commitEdit()}
-		>
-			{inputText}
-		</div>
+	<div
+		bind:this={InputElement}
+		contenteditable="true"
+		role="textbox"
+		aria-multiline="false"
+		style:position="fixed"
+		style:z-index="10"
+		style:box-sizing="content-box"
+		style:padding="0"
+		style:margin="0"
+		style:outline="none"
+		style:white-space="nowrap"
+		style:background="none"
+		style:color="inherit"
+		style:left={inputStyle.left}
+		style:top={inputStyle.top}
+		style:width={inputStyle.width}
+		style:height={inputStyle.height}
+		style:font-size={inputStyle.fontSize}
+		style:display={isEditing ? undefined : 'none'}
+		onblur={commitEdit}
+		onkeydown={(e) => e.key === 'Enter' && commitEdit()}
+	>
+		{inputText}
+	</div>
+
+	<div
+		id="contentHeader"
+		style:position="sticky"
+		style:top="0px"
+		style:left="0px"
+		style:z-index="6"
+		style:height="{headerHeight}px"
+		style:width="{bodyWidth}px"
+	>
+		<svg height="{headerHeight}px" width="{bodyWidth}px">
+			<g transform={`translate(0, 0})`}>
+				<rect x={0} y={0} width={cellWidth * cellNumber} height={headerHeight} fill="gray" />
+				<text x={0 + 10} y={cellHeight}>
+					固定ヘッダーContent {Array.from({ length: cellNumber })
+						.map((_, i) => i)
+						.join('_')}
+				</text>
+			</g>
+		</svg>
+	</div>
+	<div id="contentBody" style:z-index="2" style:height="{svgHeight}px" style:width="{bodyWidth}px">
 		<svg
-			height={headerHeight}
-			width={columnsWidth + bodyWidth}
-			style="position:fixed; top:{wrapperPos.top}px;left:{wrapperPos.left}px; max-width:100%"
+			bind:this={bodySVGEl}
+			height={svgHeight}
+			width={bodyWidth}
+			xmlns="http://www.w3.org/2000/svg"
 		>
-			<g id="leftHeader" transform={`translate(0, 0)`}>
+			<g bind:this={contentGroupBody} transform={`translate(0, 0)`}>
+				{#each rows as row, i_row}
+					<text x="10" y={i_row * cellHeight + cellHeight / 2 + 4}>{String(row[0]).repeat(50)}</text
+					>
+					<line
+						x1={0}
+						y1={i_row * cellHeight}
+						x2={bodyWidth}
+						y2={i_row * cellHeight}
+						class="box-border"
+						stroke="lightgray"
+						stroke-width="0.25"
+					/>
+				{/each}
+			</g>
+		</svg>
+	</div>
+	<div
+		id="leftBody"
+		style:position="sticky"
+		style:left="0px"
+		style:top="0px"
+		style:z-index="4"
+		style:__transform="translateY(-{svgHeight}px)"
+		style:margin-top="-{svgHeight}px"
+		style:__height="{svgHeight}px"
+		style:width="{columnsWidth}px"
+	>
+		<svg
+			bind:this={leftSVGEl}
+			height={svgHeight}
+			width={columnsWidth}
+			xmlns="http://www.w3.org/2000/svg"
+		>
+			{#each columns as column, i_col}
+				<g transform={`translate(0, 0)`}>
+					{#each rows as row, i_row}
+						<rect
+							x={columnLocsX[i_col]}
+							y={i_row * cellHeight}
+							width={columnWidths[i_col]}
+							height={cellHeight}
+							fill="white"
+						></rect>
+						<text
+							x={columnLocsX[i_col] + 10}
+							y={i_row * cellHeight + cellHeight / 2 + 4}
+							data-row={i_row}
+							data-col={i_col}
+							onclick={handleClickSVGText}
+						>
+							{row[i_col]}
+						</text>
+						<line
+							x1={0}
+							y1={i_row * cellHeight}
+							x2={columnsWidth}
+							y2={i_row * cellHeight}
+							class="box-border"
+							stroke="lightgray"
+							stroke-width="0.25"
+						/>
+					{/each}
+					<line
+						x1={columnLocsX[i_col] + columnWidths[i_col]}
+						y1={0}
+						x2={columnLocsX[i_col] + columnWidths[i_col]}
+						y2={svgHeight}
+						class="box-border"
+						stroke="lightgray"
+						stroke-width="0.25"
+					/>
+				</g>
+			{/each}
+		</svg>
+	</div>
+	<div
+		id="leftHeader"
+		style:position="fixed"
+		style:top="{wrapperPos.top}px"
+		style:left="{wrapperPos.left}px"
+		style:z-index="8"
+		style:height="{headerHeight}px"
+		style:width="{columnsWidth + bodyWidth}px"
+	>
+		<svg bind:this={leftHeaderSVGElement} height={headerHeight} width={columnsWidth + bodyWidth}>
+			<g transform={`translate(0, 0)`}>
 				{#each columns as column, i_col}
 					<rect
 						x={columnLocsX[i_col]}
@@ -175,112 +323,26 @@
 						height={headerHeight}
 						fill="lightgray"
 					></rect>
-					<text x={columnLocsX[i_col] + 10} y={cellHeight}>{column}</text>
-				{/each}
-			</g>
-			<!-- <g transform={`translate(0, 0)`}>
-				<rect
-					x={columnsWidth}
-					y={0}
-					width={cellWidth * cellNumber}
-					height={headerHeight}
-					fill="lightgray"
-				/>
-				<text x={columnsWidth + 10} y={cellHeight}
-					>固定ヘッダーContent {Array.from({ length: cellNumber })
-						.map((_, i) => i)
-						.join('_')}</text
-				>
-			</g> -->
-		</svg>
-		<div id="leftPane" style="width:330; flex-shrink:0; flex-grow: 0;">
-			<svg
-				bind:this={leftSVGEl}
-				height={svgHeight}
-				width={columnsWidth}
-				xmlns="http://www.w3.org/2000/svg"
-			>
-				{#each columns as column, i_col}
-					<g transform={`translate(0, ${headerHeight})`}>
-						{#each rows as row, i_row}
-							<rect
-								x={columnLocsX[i_col]}
-								y={(i_row + 1) * cellHeight}
-								width={columnWidths[i_col]}
-								height={cellHeight}
-								fill="white"
-							></rect>
-							<text
-								x={columnLocsX[i_col] + 10}
-								y={(i_row + 1) * cellHeight}
-								data-row={i_row}
-								data-col={i_col}
-								onclick={handleClickSVGText}>{row[i_col]}</text
-							>
-						{/each}
-					</g>
-				{/each}
-
-				<!-- <g transform={`translate(0, 0)`}>
-					{#each columns as column, i_col}
-						<rect
-							x={columnLocsX[i_col]}
-							y={scrollTop}
-							width={columnWidths[i_col]}
-							height={headerHeight}
-							fill="lightgray"
-						></rect>
-						<text x={columnLocsX[i_col] + 10} y={scrollTop + cellHeight}>{column}</text>
-					{/each}
-				</g> -->
-			</svg>
-		</div>
-		<div
-			id="content"
-			style="overflow-x: scroll; height:fit-content; width:fit-content;"
-			onscroll={handleScrollXContent}
-		>
-			<svg
-				bind:this={bodySVGEl}
-				height={svgHeight}
-				width={bodyWidth}
-				xmlns="http://www.w3.org/2000/svg"
-			>
-				<g bind:this={contentGroupBody} transform={`translate(0, ${headerHeight})`}>
-					{#each rows as row, i}
-						<text x="10" y={(i + 1) * cellHeight}>{String(row[0]).repeat(50)}</text>
-					{/each}
-				</g>
-
-				<!-- <g transform={`translate(0, 0)`}>
-					<rect x="0" y={scrollTop} width="100%" height={headerHeight} fill="lightgray" />
-					<text x="10" y={scrollTop + cellHeight}
-						>固定ヘッダーContent {Array.from({ length: cellNumber })
-							.map((_, i) => i)
-							.join('_')}</text
-					>
-				</g> -->
-			</svg>
-			<svg
-				height={headerHeight}
-				width={columnsWidth + bodyWidth}
-				style="position:absolute; top:{wrapperPos.top}px;left:{wrapperPos.left}px; max-width:100%"
-			>
-				<g id="contentHeader" transform={`translate(0, 0)`}>
+					<text x={columnLocsX[i_col] + 10} y={headerHeight * 0.6}>{column}</text>
 					<rect
-						x={columnsWidth}
+						x={columnLocsX[i_col] + columnWidths[i_col] - 2}
 						y={0}
-						width={cellWidth * cellNumber}
+						width={2}
 						height={headerHeight}
 						fill="lightgray"
-					/>
-					<text x={columnsWidth + 10} y={cellHeight}
-						>固定ヘッダーContent {Array.from({ length: cellNumber })
-							.map((_, i) => i)
-							.join('_')}</text
-					>
-				</g>
-			</svg>
-		</div>
-	{/if}
+						style="cursor: col-resize;"
+						onpointerdown={(e) => onPointerDown(e, i_col)}
+					></rect>
+				{/each}
+			</g>
+		</svg>
+	</div>
 </div>
+
+<style>
+	svg {
+		padding: 0;
+		margin: 0;
+		border: none;
+	}
+</style>
