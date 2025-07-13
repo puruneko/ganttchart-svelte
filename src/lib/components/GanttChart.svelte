@@ -64,15 +64,11 @@
 </script>
 
 <div class="flex w-full overflow-auto font-mono text-xs" style="height:100%; overflow: visible;">
-	<!-- 左側：Task情報 -->
 	<TaskTreePanel {gTasks} columns={useCols} {cellHeight} {headerHeight} />
 
-	<!-- 右側：Gantt情報 -->
 	<div>
-		<!-- gantt header -->
 		<GridHeader columns={cellNumber} {cellWidth} {cellHeight} {headerHeight} />
 
-		<!-- gantt body -->
 		<svg
 			class="w-full border"
 			style={`height: ${gTasks.length * cellHeight}px; width: ${cellWidth * cellNumber}`}

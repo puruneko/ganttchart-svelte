@@ -29,7 +29,7 @@
 		onUpdate(newTask);
 		const shiftStart = newTask.startCell - task.startCell;
 		const shiftEnd = newTask.endCell - task.endCell;
-		console.log('children', children);
+		console.log('summary children', children);
 		children.forEach((childTask) => {
 			onUpdate({
 				...childTask,

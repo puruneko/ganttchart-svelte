@@ -45,7 +45,7 @@
 		const e = Math.min(s + rCellNumber, cellNumber - 1);
 		return {
 			taskId: `t${i}`,
-			title: `Taskkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkk ${i}`,
+			title: `Taskkkk ${i}`,
 			startDate: toDateFromCellCoordinate(s, now, 1000 * 60 * 60 * 1),
 			endDate: toDateFromCellCoordinate(e, now, 1000 * 60 * 60 * 1),
 			parentTaskId: rTaskNumber < taskNumber * 0.99 ? `pp${rTaskNumber}` : '',
@@ -56,4 +56,4 @@
 
 <!-- <GanttChart {tasks} {cellNumber} /> -->
 <div style="height: 50px; width:50px; background-color: red;">debug margin</div>
-<Sticky2 />
+<Sticky2 {tasks} {cellNumber} />

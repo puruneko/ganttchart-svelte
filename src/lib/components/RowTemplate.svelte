@@ -99,7 +99,6 @@
 					startCell,
 					endCell: startCell + (task.endCell - task.startCell)
 				};
-				onUpdate(newTask);
 			} else if (isSizeChanging === 'left') {
 				const newStart = Math.min(initialEnd - 0.5, initialStart + deltaCellsX);
 				newTask = { ...task, startCell: Math.max(0, newStart) };
@@ -109,7 +108,7 @@
 			}
 			//
 			if (newTask) {
-				console.log('update:', isSizeChanging, newTask);
+				console.log('RowTemplate update:', isSizeChanging, newTask);
 				onUpdate(newTask);
 			}
 		}
