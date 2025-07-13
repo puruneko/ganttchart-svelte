@@ -3,10 +3,11 @@
 
 	// 描画する行数（動的に変更可）
 	//
-	const headerHeight = 50;
 	const cellHeight = 30;
-	const cellWidth = 20;
+	const cellWidth = 30;
 	const cellNumber = 200;
+	const headerCellHeight = 20;
+	const headerHeight = headerCellHeight * 2;
 
 	//
 	let WrapperElement: HTMLDivElement;
@@ -148,8 +149,8 @@
 	const onPointerMove = (event: PointerEvent) => {
 		console.log('onPointerMove', event);
 		if (colWidthResizeState.index < 0) return;
-		const delta = event.clientX - colWidthResizeState.startX;
-		columnWidths[colWidthResizeState.index] = Math.max(50, colWidthResizeState.startWidth + delta);
+		const deltaX = event.clientX - colWidthResizeState.startX;
+		columnWidths[colWidthResizeState.index] = Math.max(50, colWidthResizeState.startWidth + deltaX);
 	};
 
 	function onPointerUp() {
@@ -210,14 +211,52 @@
 		style:height="{headerHeight}px"
 		style:width="{bodyWidth}px"
 	>
-		<svg height="{headerHeight}px" width="{bodyWidth}px">
+		<svg height="{headerHeight}px" width="{bodyWidth}px" xmlns="http://www.w3.org/2000/svg">
 			<g transform={`translate(0, 0})`}>
-				<rect x={0} y={0} width={cellWidth * cellNumber} height={headerHeight} fill="gray" />
-				<text x={0 + 10} y={cellHeight}>
-					固定ヘッダーContent {Array.from({ length: cellNumber })
-						.map((_, i) => i)
-						.join('_')}
-				</text>
+				<rect x={0} y={0} width={cellWidth * cellNumber} height={headerHeight} fill="lightblue" />
+				{#each Array(cellNumber + 1) as _, i_col}
+					{#if i_col % 10 === 0}
+						<text x={cellWidth * i_col + 1} y={0}>
+							{i_col}
+						</text>
+					{/if}
+					<text x={cellWidth * i_col + 1} y={headerCellHeight}>
+						{i_col}
+					</text>
+					<line
+						x1={cellWidth * i_col}
+						y1={i_col % 10 ? headerCellHeight : 0}
+						x2={cellWidth * i_col}
+						y2={headerHeight}
+						class="box-border"
+						stroke="lightgray"
+						stroke-width="0.25"
+					/>
+				{/each}
+			</g>
+			<g id="contentHeaderGrid">
+				{#each Array(cellNumber + 1) as _, i_col}
+					<line
+						x1={cellWidth * i_col}
+						y1={i_col % 10 ? headerCellHeight : 0}
+						x2={cellWidth * i_col}
+						y2={headerHeight}
+						class="box-border"
+						stroke="lightgray"
+						stroke-width="0.25"
+					/>
+				{/each}
+				{#each Array(2 + 1) as _, i_row}
+					<line
+						x1={0}
+						y1={i_row * headerCellHeight}
+						x2={bodyWidth}
+						y2={i_row * headerCellHeight}
+						class="box-border"
+						stroke="lightgray"
+						stroke-width="0.25"
+					/>
+				{/each}
 			</g>
 		</svg>
 	</div>
@@ -230,13 +269,28 @@
 		>
 			<g bind:this={contentGroupBody} transform={`translate(0, 0)`}>
 				{#each rows as row, i_row}
-					<text x="10" y={i_row * cellHeight + cellHeight / 2 + 4}>{String(row[0]).repeat(50)}</text
-					>
+					<text x="10" y={i_row * cellHeight}>{String(row[0]).repeat(50)}</text>
+				{/each}
+			</g>
+			<g id="contentBodyGrid">
+				{#each rows as row, i_row}
+					<text x="10" y={i_row * cellHeight}>{String(row[0]).repeat(50)}</text>
 					<line
 						x1={0}
 						y1={i_row * cellHeight}
 						x2={bodyWidth}
 						y2={i_row * cellHeight}
+						class="box-border"
+						stroke="lightgray"
+						stroke-width="0.25"
+					/>
+				{/each}
+				{#each Array(cellNumber + 1) as _, i_col}
+					<line
+						x1={cellWidth * i_col}
+						y1={0}
+						x2={cellWidth * i_col}
+						y2={svgHeight}
 						class="box-border"
 						stroke="lightgray"
 						stroke-width="0.25"
@@ -251,8 +305,8 @@
 		style:left="0px"
 		style:top="0px"
 		style:z-index="4"
-		style:__transform="translateY(-{svgHeight}px)"
-		style:margin-top="-{svgHeight}px"
+		style:transform="translateY(-{svgHeight}px)"
+		style:__margin-top="-{svgHeight}px"
 		style:__height="{svgHeight}px"
 		style:width="{columnsWidth}px"
 	>
@@ -274,7 +328,7 @@
 						></rect>
 						<text
 							x={columnLocsX[i_col] + 10}
-							y={i_row * cellHeight + cellHeight / 2 + 4}
+							y={i_row * cellHeight}
 							data-row={i_row}
 							data-col={i_col}
 							onclick={handleClickSVGText}
@@ -313,7 +367,12 @@
 		style:height="{headerHeight}px"
 		style:width="{columnsWidth + bodyWidth}px"
 	>
-		<svg bind:this={leftHeaderSVGElement} height={headerHeight} width={columnsWidth + bodyWidth}>
+		<svg
+			bind:this={leftHeaderSVGElement}
+			height={headerHeight}
+			width={columnsWidth + bodyWidth}
+			xmlns="http://www.w3.org/2000/svg"
+		>
 			<g transform={`translate(0, 0)`}>
 				{#each columns as column, i_col}
 					<rect
@@ -321,15 +380,19 @@
 						y={0}
 						width={columnWidths[i_col]}
 						height={headerHeight}
-						fill="lightgray"
+						fill="skyblue"
 					></rect>
-					<text x={columnLocsX[i_col] + 10} y={headerHeight * 0.6}>{column}</text>
+					<text
+						class="svg-textanchor-middle"
+						x={columnLocsX[i_col] + columnWidths[i_col] / 2}
+						y={headerHeight / 2}>{column}</text
+					>
 					<rect
-						x={columnLocsX[i_col] + columnWidths[i_col] - 2}
+						x={columnLocsX[i_col] + columnWidths[i_col] - 5}
 						y={0}
-						width={2}
+						width={5}
 						height={headerHeight}
-						fill="lightgray"
+						fill="rgba(0,0,0,0)"
 						style="cursor: col-resize;"
 						onpointerdown={(e) => onPointerDown(e, i_col)}
 					></rect>
@@ -340,9 +403,19 @@
 </div>
 
 <style>
-	svg {
-		padding: 0;
-		margin: 0;
-		border: none;
+	svg text {
+		/*y方向の基準変更*/
+		dominant-baseline: text-before-edge; /*超大事！textの配置基準を左上に設定*/
+		/*dominant-baseline: middle; /*文字の中心*/
+		/*dominant-baseline: baseline; /*ベースライン（デフォルト）*/
+
+		/*x方向の基準変更*/
+		text-anchor: start; /*左揃え（デフォルト）*/
+		/*text-anchor: middle; /*中央揃え*/
+		/*text-anchor: end; /*右揃え*/
+	}
+	.svg-textanchor-middle {
+		dominant-baseline: middle; /*文字の中心*/
+		text-anchor: middle; /*中央揃え*/
 	}
 </style>
