@@ -11,8 +11,6 @@
 	//
 	let cellHeight = $state(20);
 	let cellWidth = $state(20);
-	let headerCellHeight = $state(20);
-	let headerHeight = $derived(headerCellHeight * 2);
 	//
 	const lineColor = 'gray';
 
@@ -24,17 +22,136 @@
 	let bodySVGEl: SVGSVGElement;
 
 	//
+	//scale
+	//
+	const getDateParam = (d: Date, name: string) => {
+		if (name === 'minute') {
+			return d.getMinutes();
+		} else if (name === 'hour') {
+			return d.getHours();
+		} else if (name === 'date') {
+			return d.getDate();
+		} else if (name === 'week') {
+			const one = new Date(d.getFullYear(), 1, 1);
+			const days = Math.floor((d.getTime() - one.getTime()) / (1000 * 60 * 60 * 24));
+			const weekOffset = 7 - one.getDay() + 1;
+			const weekNumber = Math.floor((days - weekOffset) / 7) + 2;
+			return weekNumber;
+		} else if (name === 'month') {
+			return d.getMonth();
+		} else if (name === 'quater') {
+			return ((Math.floor((d.getMonth() - 1) / 3) + 5) % 5) + 1;
+		} else if (name === 'year') {
+			return d.getFullYear();
+		}
+	};
+	const hourMilliseconds = 1000 * 60 * 60;
+	type T_DateScale = {
+		name: string;
+		unit: number;
+		unitSubstep: number;
+		format: (dt: Date) => any;
+		extraScales?: {
+			name: string;
+			unit: number;
+			format: (dt: Date) => any;
+			isUpdate: (baseDt: Date) => boolean;
+		}[];
+	};
+	let dateScaleSettings: T_DateScale[] = $state([
+		{
+			name: 'hour',
+			unit: hourMilliseconds / 4, //15min
+			unitSubstep: 2,
+			format: (dt: Date) => dt.getMinutes(),
+			extraScales: [
+				{
+					name: 'date',
+					unit: hourMilliseconds * 24 * 1,
+					format: (dt: Date) => `${dt.getDate()}日`,
+					isUpdate: (dt: Date) => dt.getHours() === 0
+				},
+				{
+					name: 'hour',
+					unit: hourMilliseconds * 1,
+					format: (dt: Date) => `${dt.getHours()}時`,
+					isUpdate: (dt: Date) => dt.getMinutes() === 0
+				}
+			]
+		},
+		{
+			name: 'date',
+			unit: hourMilliseconds * 1, //60min
+			unitSubstep: 2,
+			format: (dt: Date) => dt.getHours(),
+			extraScales: [
+				{
+					name: 'date',
+					unit: hourMilliseconds * 24 * 1,
+					format: (dt: Date) => `${dt.getDate()}日`,
+					isUpdate: (dt: Date) => dt.getHours() === 0
+				}
+			]
+		}
+	]);
+	let dateScaleName: string = $state('date');
+	let dateScale: T_DateScale = $derived(
+		(dateScaleSettings.filter((s) => s.name === dateScaleName) || [dateScaleSettings[0]])[0]
+	);
+	let dateBase = $derived.by(() => {
+		const t = Date.now() - (dateScale.unit * cellNumber) / 4;
+		return new Date(Math.ceil(t / dateScale.unit) * dateScale.unit);
+	});
+	let dateHeaderLabels: { text: string; start: number; end: number }[][] = $derived([
+		//extra
+		...(dateScale.extraScales || []).map((eScale) => {
+			//head offset
+			let i_offset = 0;
+			while (
+				!eScale.isUpdate(new Date(dateBase.getTime() + dateScale.unit * i_offset)) &&
+				i_offset < cellNumber
+			) {
+				i_offset += 1;
+			}
+			const unit_offset = dateScale.unit * i_offset;
+			const ratio = eScale.unit / dateScale.unit;
+			const scaleNums = Math.ceil(cellNumber / ratio + 0.5);
+			const head =
+				i_offset !== 0
+					? [
+							{
+								text: eScale.format(new Date(dateBase.getTime())),
+								start: 0,
+								end: i_offset
+							}
+						]
+					: [];
+			//
+			const main = [...Array(scaleNums)].map((_, i) => {
+				const end = ratio * (i + 1) + i_offset;
+				return {
+					text: eScale.format(new Date(dateBase.getTime() + eScale.unit * i + unit_offset)),
+					start: ratio * i + i_offset,
+					end: Math.min(end, cellNumber)
+				};
+			});
+			return [...head, ...main];
+		}),
+		//base
+		[...Array(cellNumber + 1)].map((_, i_col) => {
+			return {
+				text: dateScale.format(new Date(dateBase.getTime() + dateScale.unit * i_col)),
+				start: i_col,
+				end: i_col + 1
+			};
+		})
+	]);
+	let headerCellHeight = $state(20);
+	let headerHeight = $derived(headerCellHeight * dateHeaderLabels.length);
+
+	//
 	//gTasks
 	//
-	let dateUnit = $state(1000 * 60 * 60 * 1);
-	let dateBase = $state(new Date(Date.now() - ($state.snapshot(dateUnit) * cellNumber) / 4));
-	let dateUnitSubstep = $state(2);
-	let dateHeaderLabel = $derived(
-		[...Array(cellNumber + 1).keys()].map((i) => {
-			return new Date(dateBase.getTime() + dateUnit * i);
-		})
-	);
-
 	let gTasks: GanttTask[] = $derived.by(() => {
 		const parentTaskIds = new Set(tasks.map((task) => task.parentTaskId));
 		return Array.from(parentTaskIds)
@@ -42,7 +159,9 @@
 			.map((parentTaskId) => {
 				const children = tasks
 					.filter((task) => task.parentTaskId === parentTaskId)
-					.map((task) => toGanttTaskFromTask(task, dateBase, dateUnit, dateUnitSubstep));
+					.map((task) =>
+						toGanttTaskFromTask(task, dateBase, dateScale.unit, dateScale.unitSubstep)
+					);
 				if (parentTaskId === '') {
 					return children;
 				}
@@ -81,6 +200,8 @@
 		//
 
 		onPointerMoveRendarLoop();
+
+		console.log('dd', dateHeaderLabels);
 	});
 
 	//
@@ -237,7 +358,7 @@
 	const onTaskUpdate = (newTask: GanttTask) => {
 		console.log('sticky2 onTaskUpdate', newTask);
 		tasks = tasks.map((task: Task) =>
-			task.taskId === newTask.taskId ? toTaskFromGanttTask(newTask, dateBase, dateUnit) : task
+			task.taskId === newTask.taskId ? toTaskFromGanttTask(newTask, dateBase, dateScale.unit) : task
 		);
 	};
 	// 子タスクを持つタスクID -> 配下の子タスク一覧
@@ -321,30 +442,25 @@
 			<svg height="{headerHeight}px" width="{bodyWidth}px" xmlns="http://www.w3.org/2000/svg">
 				<g transform={`translate(0, 0})`}>
 					<rect x={0} y={0} width={cellWidth * cellNumber} height={headerHeight} fill="lightblue" />
-					{#each dateHeaderLabel as dt, i_col}
-						{#if dt.getHours() === 0}
-							<text x={cellWidth * i_col + 1} y={0}>
-								{dt.getDate()}
+					{#each dateHeaderLabels as dateHeaderLabel, i_headerLevel}
+						{#each dateHeaderLabel as label, i_col}
+							<text x={cellWidth * label.start + 1} y={cellHeight * i_headerLevel}>
+								{label.text}
 							</text>
-						{/if}
-						<text x={cellWidth * i_col + 1} y={headerCellHeight}>
-							{dt.getHours()}
-						</text>
+							<line
+								x1={cellWidth * label.start}
+								y1={cellHeight * i_headerLevel}
+								x2={cellWidth * label.start}
+								y2={cellHeight * (i_headerLevel + 1)}
+								class="box-border"
+								stroke="gray"
+								stroke-width="0.25"
+							/>
+						{/each}
 					{/each}
 				</g>
 				<g id="contentHeaderGrid">
-					{#each dateHeaderLabel as dt, i_col}
-						<line
-							x1={cellWidth * i_col}
-							y1={dt.getHours() !== 0 ? headerCellHeight : 0}
-							x2={cellWidth * i_col}
-							y2={headerHeight}
-							class="box-border"
-							stroke="gray"
-							stroke-width="0.25"
-						/>
-					{/each}
-					{#each Array(2 + 1) as _, i_row}
+					{#each Array(dateHeaderLabels.length + 1) as _, i_row}
 						<line
 							x1={0}
 							y1={i_row * headerCellHeight}
